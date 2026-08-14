@@ -1,4 +1,4 @@
-﻿const serverService = require('../services/serverService');
+const serverService = require('../services/serverService');
 const { createServerSchema, createChannelSchema } = require('../validators/serverValidator');
 
 async function createServerController(req, res) {
@@ -28,10 +28,28 @@ async function listChannelsController(req, res) {
   res.status(200).json(channels);
 }
 
+async function leaveServerController(req, res) {
+  const result = await serverService.leaveServer(req.user.userId, req.params.serverId);
+  res.status(200).json(result);
+}
+
+async function kickMemberController(req, res) {
+  const result = await serverService.kickMember(req.user.userId, req.params.serverId, req.params.userId);
+  res.status(200).json(result);
+}
+
+async function deleteServerController(req, res) {
+  const result = await serverService.deleteServer(req.user.userId, req.params.serverId);
+  res.status(200).json(result);
+}
+
 module.exports = {
   createServerController,
   joinServerController,
   listUserServersController,
   createChannelController,
   listChannelsController,
+  leaveServerController,
+  kickMemberController,
+  deleteServerController,
 };
