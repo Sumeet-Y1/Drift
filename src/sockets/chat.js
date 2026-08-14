@@ -1,9 +1,9 @@
-﻿const { verifyToken } = require('../utils/token');
+const { verifyToken } = require('../utils/token');
 const prisma = require('../config/db');
 const messageService = require('../services/messageService');
+const conversationService = require('../services/conversationService');
 
 function initChatSockets(io) {
-  // Middleware: authenticate every socket connection using the JWT
   io.use((socket, next) => {
     const token = socket.handshake.auth && socket.handshake.auth.token;
 
@@ -22,6 +22,8 @@ function initChatSockets(io) {
 
   io.on('connection', (socket) => {
     console.log('User connected: ' + socket.user.username + ' (' + socket.id + ')');
+
+    // --- Server channel events ---
 
     socket.on('join_channel', async (channelId) => {
       try {
@@ -43,7 +45,7 @@ function initChatSockets(io) {
           return;
         }
 
-        socket.join(channelId);
+        socket.join('channel:' + channelId);
         socket.emit('joined_channel', channelId);
       } catch (err) {
         socket.emit('error_message', 'Failed to join channel');
@@ -51,7 +53,7 @@ function initChatSockets(io) {
     });
 
     socket.on('leave_channel', (channelId) => {
-      socket.leave(channelId);
+      socket.leave('channel:' + channelId);
     });
 
     socket.on('send_message', async ({ channelId, content }) => {
@@ -60,7 +62,35 @@ function initChatSockets(io) {
 
         const message = await messageService.createMessage(socket.user.userId, channelId, content);
 
-        io.to(channelId).emit('new_message', message);
+        io.to('channel:' + channelId).emit('new_message', message);
+      } catch (err) {
+        socket.emit('error_message', err.message || 'Failed to send message');
+      }
+    });
+
+    // --- Direct message / conversation events ---
+
+    socket.on('join_conversation', async (conversationId) => {
+      try {
+        await conversationService.assertMember(socket.user.userId, conversationId);
+        socket.join('conversation:' + conversationId);
+        socket.emit('joined_conversation', conversationId);
+      } catch (err) {
+        socket.emit('error_message', err.message || 'Failed to join conversation');
+      }
+    });
+
+    socket.on('leave_conversation', (conversationId) => {
+      socket.leave('conversation:' + conversationId);
+    });
+
+    socket.on('send_dm', async ({ conversationId, content }) => {
+      try {
+        if (!content || !content.trim()) return;
+
+        const message = await conversationService.createMessage(socket.user.userId, conversationId, content);
+
+        io.to('conversation:' + conversationId).emit('new_dm', message);
       } catch (err) {
         socket.emit('error_message', err.message || 'Failed to send message');
       }
