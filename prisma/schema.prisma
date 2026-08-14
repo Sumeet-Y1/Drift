@@ -1,0 +1,84 @@
+// Drift — database schema
+// Models: User, Server (a "hub"), Channel, Membership, Message
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+
+  ownedServers  Server[]      @relation("ServerOwner")
+  memberships   Membership[]
+  messages      Message[]
+}
+
+model Server {
+  id          String   @id @default(uuid())
+  name        String
+  inviteCode  String   @unique @default(uuid())
+  createdAt   DateTime @default(now())
+
+  ownerId     String
+  owner       User     @relation("ServerOwner", fields: [ownerId], references: [id])
+
+  channels    Channel[]
+  memberships Membership[]
+}
+
+model Channel {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  messages  Message[]
+
+  @@unique([serverId, name])
+}
+
+// Join table: which users belong to which servers
+model Membership {
+  id        String   @id @default(uuid())
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  editedAt  DateTime?
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
