@@ -25,9 +25,11 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/servers', require('./routes/servers'));
 app.use('/api/channels', require('./routes/channels'));
+app.use('/api/conversations', require('./routes/conversations'));
 
 // --- Error handler (must be last) ---
 app.use(errorHandler);
 
 module.exports = app;
+
 
