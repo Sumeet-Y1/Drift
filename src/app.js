@@ -23,7 +23,7 @@ app.get('/health', (req, res) => {
 
 // --- Routes (mounted as we build them) ---
 app.use('/api/auth', require('./routes/auth'));
-// app.use('/api/servers', require('./routes/servers'));
+app.use('/api/servers', require('./routes/servers'));
 // app.use('/api/channels', require('./routes/channels'));
 
 // --- Error handler (must be last) ---
