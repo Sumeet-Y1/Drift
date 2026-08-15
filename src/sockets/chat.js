@@ -1,4 +1,4 @@
-const { verifyToken } = require('../utils/token');
+﻿const { verifyToken } = require('../utils/token');
 const prisma = require('../config/db');
 const messageService = require('../services/messageService');
 const conversationService = require('../services/conversationService');
@@ -33,7 +33,7 @@ function initChatSockets(io) {
     const userId = socket.user.userId;
     console.log('User connected: ' + socket.user.username + ' (' + socket.id + ')');
 
-    // Personal room — lets us target this specific user across all their tabs/devices
+    // Personal room â€” lets us target this specific user across all their tabs/devices
     socket.join('user:' + userId);
 
     presence.markOnline(userId, socket.id, (idleUserId) => {
@@ -144,6 +144,10 @@ function initChatSockets(io) {
     });
 
     // --- Disconnect ---
+
+    socket.on('ping_check', (clientTime, callback) => {
+      if (typeof callback === 'function') callback(clientTime, Date.now());
+    });
 
     socket.on('disconnect', () => {
       console.log('User disconnected: ' + socket.user.username + ' (' + socket.id + ')');
