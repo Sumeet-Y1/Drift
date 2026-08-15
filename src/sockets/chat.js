@@ -1,4 +1,4 @@
-﻿const { verifyToken } = require('../utils/token');
+const { verifyToken } = require('../utils/token');
 const prisma = require('../config/db');
 const messageService = require('../services/messageService');
 const conversationService = require('../services/conversationService');
@@ -33,7 +33,6 @@ function initChatSockets(io) {
     const userId = socket.user.userId;
     console.log('User connected: ' + socket.user.username + ' (' + socket.id + ')');
 
-    // Personal room â€” lets us target this specific user across all their tabs/devices
     socket.join('user:' + userId);
 
     presence.markOnline(userId, socket.id, (idleUserId) => {
@@ -41,7 +40,6 @@ function initChatSockets(io) {
     });
     broadcastPresence(userId, 'online');
 
-    // Let the client ask for current status of a list of users (e.g. on app load)
     socket.on('get_presence', (userIds, callback) => {
       const statuses = {};
       for (const id of userIds) {
@@ -50,7 +48,6 @@ function initChatSockets(io) {
       if (typeof callback === 'function') callback(statuses);
     });
 
-    // Any inbound event counts as activity for idle tracking
     socket.use((packet, next) => {
       presence.markActivity(userId, (idleUserId) => {
         broadcastPresence(idleUserId, 'idle');
@@ -91,11 +88,12 @@ function initChatSockets(io) {
       socket.leave('channel:' + channelId);
     });
 
-    socket.on('send_message', async ({ channelId, content }) => {
+    socket.on('send_message', async ({ channelId, content, fileKey, fileName, fileType }) => {
       try {
         if (!content || !content.trim()) return;
 
-        const message = await messageService.createMessage(userId, channelId, content);
+        const fileData = fileKey ? { fileKey, fileName, fileType } : null;
+        const message = await messageService.createMessage(userId, channelId, content, fileData);
 
         io.to('channel:' + channelId).emit('new_message', message);
       } catch (err) {
@@ -119,11 +117,12 @@ function initChatSockets(io) {
       socket.leave('conversation:' + conversationId);
     });
 
-    socket.on('send_dm', async ({ conversationId, content }) => {
+    socket.on('send_dm', async ({ conversationId, content, fileKey, fileName, fileType }) => {
       try {
         if (!content || !content.trim()) return;
 
-        const message = await conversationService.createMessage(userId, conversationId, content);
+        const fileData = fileKey ? { fileKey, fileName, fileType } : null;
+        const message = await conversationService.createMessage(userId, conversationId, content, fileData);
 
         io.to('conversation:' + conversationId).emit('new_dm', message);
       } catch (err) {
@@ -143,11 +142,13 @@ function initChatSockets(io) {
       socket.to(room).emit('user_stopped_typing', { userId, roomType, roomId });
     });
 
-    // --- Disconnect ---
+    // --- Latency ---
 
     socket.on('ping_check', (clientTime, callback) => {
       if (typeof callback === 'function') callback(clientTime, Date.now());
     });
+
+    // --- Disconnect ---
 
     socket.on('disconnect', () => {
       console.log('User disconnected: ' + socket.user.username + ' (' + socket.id + ')');
