@@ -70,6 +70,10 @@ model Message {
   editedAt  DateTime?
   deletedAt DateTime?
 
+  fileKey   String?
+  fileName  String?
+  fileType  String?
+
   authorId  String
   author    User      @relation(fields: [authorId], references: [id])
 
@@ -106,6 +110,10 @@ model DirectMessage {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   deletedAt DateTime?
+
+  fileKey   String?
+  fileName  String?
+  fileType  String?
 
   authorId  String
   author    User         @relation(fields: [authorId], references: [id])
