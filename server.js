@@ -1,21 +1,37 @@
-﻿const http = require('http');
-const { Server } = require('socket.io');
-const app = require('./src/app');
-const initChatSockets = require('./src/sockets/chat');
+require('dotenv').config();
+require('express-async-errors');
 
-const PORT = process.env.PORT || 4000;
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 
-const server = http.createServer(app);
+const errorHandler = require('./middleware/errorHandler');
+const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { router: webhookRouter } = require('./routes/webhooks');
 
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-  },
+const app = express();
+
+app.use(helmet());
+app.use(cors());
+app.use(morgan('dev'));
+
+// Webhook route mounted BEFORE express.json() since it needs raw body for signature verification
+app.use('/api/webhooks', webhookRouter);
+
+app.use(express.json());
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'drift-server' });
 });
 
-initChatSockets(io);
+app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/servers', apiLimiter, require('./routes/servers'));
+app.use('/api/channels', apiLimiter, require('./routes/channels'));
+app.use('/api/conversations', apiLimiter, require('./routes/conversations'));
+app.use('/api/voice', apiLimiter, require('./routes/voice'));
+app.use('/api/uploads', apiLimiter, require('./routes/uploads'));
 
-server.listen(PORT, () => {
-  console.log('Drift server running on http://localhost:' + PORT);
-});
+app.use(errorHandler);
+
+module.exports = app;
