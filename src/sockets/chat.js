@@ -3,6 +3,7 @@ const prisma = require('../config/db');
 const messageService = require('../services/messageService');
 const conversationService = require('../services/conversationService');
 const presence = require('./presence');
+const { isRateLimited, clearUser } = require('./rateLimiter');
 
 function initChatSockets(io) {
   io.use((socket, next) => {
@@ -90,6 +91,11 @@ function initChatSockets(io) {
 
     socket.on('send_message', async ({ channelId, content, fileKey, fileName, fileType }) => {
       try {
+        if (isRateLimited(userId, 'send_message')) {
+          socket.emit('error_message', 'You are sending messages too quickly. Please slow down.');
+          return;
+        }
+
         if (!content || !content.trim()) return;
 
         const fileData = fileKey ? { fileKey, fileName, fileType } : null;
@@ -119,6 +125,11 @@ function initChatSockets(io) {
 
     socket.on('send_dm', async ({ conversationId, content, fileKey, fileName, fileType }) => {
       try {
+        if (isRateLimited(userId, 'send_dm')) {
+          socket.emit('error_message', 'You are sending messages too quickly. Please slow down.');
+          return;
+        }
+
         if (!content || !content.trim()) return;
 
         const fileData = fileKey ? { fileKey, fileName, fileType } : null;
@@ -133,6 +144,8 @@ function initChatSockets(io) {
     // --- Typing indicators (ephemeral, no persistence) ---
 
     socket.on('typing_start', ({ roomType, roomId }) => {
+      if (isRateLimited(userId, 'typing_start')) return;
+
       const room = (roomType === 'channel' ? 'channel:' : 'conversation:') + roomId;
       socket.to(room).emit('user_typing', { userId, username: socket.user.username, roomType, roomId });
     });
@@ -157,6 +170,8 @@ function initChatSockets(io) {
       if (result === 'offline') {
         broadcastPresence(userId, 'offline');
       }
+
+      clearUser(userId);
     });
   });
 }
