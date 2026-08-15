@@ -1,4 +1,17 @@
 const prisma = require('../config/db');
+const { getDownloadUrl } = require('./uploadService');
+
+async function attachFileUrl(message) {
+  if (message.fileKey) {
+    const fileUrl = await getDownloadUrl(message.fileKey);
+    return { ...message, fileUrl };
+  }
+  return message;
+}
+
+async function attachFileUrls(messages) {
+  return Promise.all(messages.map(attachFileUrl));
+}
 
 async function getMessages(userId, channelId, limit = 50) {
   const channel = await prisma.channel.findUnique({
@@ -31,10 +44,10 @@ async function getMessages(userId, channelId, limit = 50) {
     },
   });
 
-  return messages;
+  return attachFileUrls(messages);
 }
 
-async function createMessage(userId, channelId, content) {
+async function createMessage(userId, channelId, content, fileData) {
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
   });
@@ -55,14 +68,22 @@ async function createMessage(userId, channelId, content) {
     throw err;
   }
 
+  const data = { content, authorId: userId, channelId };
+
+  if (fileData) {
+    data.fileKey = fileData.fileKey;
+    data.fileName = fileData.fileName;
+    data.fileType = fileData.fileType;
+  }
+
   const message = await prisma.message.create({
-    data: { content, authorId: userId, channelId },
+    data,
     include: {
       author: { select: { id: true, username: true, avatarUrl: true } },
     },
   });
 
-  return message;
+  return attachFileUrl(message);
 }
 
 async function editMessage(userId, messageId, newContent) {
@@ -88,7 +109,7 @@ async function editMessage(userId, messageId, newContent) {
     },
   });
 
-  return updated;
+  return attachFileUrl(updated);
 }
 
 async function deleteMessage(userId, messageId) {
@@ -118,7 +139,7 @@ async function deleteMessage(userId, messageId) {
 
   const deleted = await prisma.message.update({
     where: { id: messageId },
-    data: { deletedAt: new Date(), content: '[deleted]' },
+    data: { deletedAt: new Date(), content: '[deleted]', fileKey: null, fileName: null, fileType: null },
   });
 
   return deleted;
