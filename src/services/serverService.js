@@ -1,4 +1,4 @@
-const prisma = require('../config/db');
+﻿const prisma = require('../config/db');
 
 async function createServer(userId, name) {
   const server = await prisma.server.create({
@@ -55,7 +55,7 @@ async function listUserServers(userId) {
   return memberships.map((m) => ({ ...m.server, role: m.role }));
 }
 
-async function createChannel(userId, serverId, name) {
+async function createChannel(userId, serverId, name, type) {
   const membership = await prisma.membership.findUnique({
     where: { userId_serverId: { userId, serverId } },
   });
@@ -67,7 +67,7 @@ async function createChannel(userId, serverId, name) {
   }
 
   const channel = await prisma.channel.create({
-    data: { name, serverId },
+    data: { name, serverId, type: type || 'TEXT' },
   });
 
   return channel;
@@ -192,3 +192,4 @@ module.exports = {
   kickMember,
   deleteServer,
 };
+
