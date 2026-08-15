@@ -5,4 +5,18 @@ async function getVoiceTokenController(req, res) {
   res.status(200).json(result);
 }
 
-module.exports = { getVoiceTokenController };
+async function muteParticipantController(req, res) {
+  const result = await voiceService.muteParticipant(req.user.userId, req.params.channelId, req.params.userId);
+  res.status(200).json(result);
+}
+
+async function disconnectParticipantController(req, res) {
+  const result = await voiceService.disconnectParticipant(req.user.userId, req.params.channelId, req.params.userId);
+  res.status(200).json(result);
+}
+
+module.exports = {
+  getVoiceTokenController,
+  muteParticipantController,
+  disconnectParticipantController,
+};
