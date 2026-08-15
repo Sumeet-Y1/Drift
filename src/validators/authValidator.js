@@ -1,4 +1,4 @@
-﻿const { z } = require('zod');
+const { z } = require('zod');
 
 const signupSchema = z.object({
   username: z.string().min(3).max(20),
@@ -11,4 +11,8 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-module.exports = { signupSchema, loginSchema };
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+module.exports = { signupSchema, loginSchema, refreshSchema };
