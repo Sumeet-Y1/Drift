@@ -1,4 +1,4 @@
-const serverService = require('../services/serverService');
+﻿const serverService = require('../services/serverService');
 const { createServerSchema, createChannelSchema } = require('../validators/serverValidator');
 
 async function createServerController(req, res) {
@@ -19,7 +19,7 @@ async function listUserServersController(req, res) {
 
 async function createChannelController(req, res) {
   const parsed = createChannelSchema.parse(req.body);
-  const channel = await serverService.createChannel(req.user.userId, req.params.serverId, parsed.name);
+  const channel = await serverService.createChannel(req.user.userId, req.params.serverId, parsed.name, parsed.type);
   res.status(201).json(channel);
 }
 
