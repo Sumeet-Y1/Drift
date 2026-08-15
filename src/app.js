@@ -8,13 +8,17 @@ const morgan = require('morgan');
 
 const errorHandler = require('./middleware/errorHandler');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { router: webhookRouter } = require('./routes/webhooks');
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
 app.use(morgan('dev'));
+
+app.use('/api/webhooks', webhookRouter);
+
+app.use(express.json());
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'drift-server' });
