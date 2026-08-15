@@ -36,12 +36,13 @@ model Server {
 }
 
 model Channel {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String
-  createdAt DateTime @default(now())
+  type      ChannelType @default(TEXT)
+  createdAt DateTime    @default(now())
 
   serverId  String
-  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   messages  Message[]
 
@@ -117,4 +118,9 @@ enum Role {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
 }
