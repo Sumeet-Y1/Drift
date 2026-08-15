@@ -1,4 +1,17 @@
 const prisma = require('../config/db');
+const { getDownloadUrl } = require('./uploadService');
+
+async function attachFileUrl(message) {
+  if (message.fileKey) {
+    const fileUrl = await getDownloadUrl(message.fileKey);
+    return { ...message, fileUrl };
+  }
+  return message;
+}
+
+async function attachFileUrls(messages) {
+  return Promise.all(messages.map(attachFileUrl));
+}
 
 async function createOrGetConversation(userId, otherUserIds, name) {
   const allUserIds = Array.from(new Set([userId, ...otherUserIds]));
@@ -11,7 +24,6 @@ async function createOrGetConversation(userId, otherUserIds, name) {
 
   const isGroup = allUserIds.length > 2;
 
-  // For 1-on-1 DMs, try to find an existing conversation between exactly these two users
   if (!isGroup) {
     const existing = await prisma.conversation.findFirst({
       where: {
@@ -88,20 +100,28 @@ async function getMessages(userId, conversationId, limit = 50) {
     },
   });
 
-  return messages;
+  return attachFileUrls(messages);
 }
 
-async function createMessage(userId, conversationId, content) {
+async function createMessage(userId, conversationId, content, fileData) {
   await assertMember(userId, conversationId);
 
+  const data = { content, authorId: userId, conversationId };
+
+  if (fileData) {
+    data.fileKey = fileData.fileKey;
+    data.fileName = fileData.fileName;
+    data.fileType = fileData.fileType;
+  }
+
   const message = await prisma.directMessage.create({
-    data: { content, authorId: userId, conversationId },
+    data,
     include: {
       author: { select: { id: true, username: true, avatarUrl: true } },
     },
   });
 
-  return message;
+  return attachFileUrl(message);
 }
 
 async function editMessage(userId, messageId, newContent) {
@@ -127,7 +147,7 @@ async function editMessage(userId, messageId, newContent) {
     },
   });
 
-  return updated;
+  return attachFileUrl(updated);
 }
 
 async function deleteMessage(userId, messageId) {
@@ -147,7 +167,7 @@ async function deleteMessage(userId, messageId) {
 
   const deleted = await prisma.directMessage.update({
     where: { id: messageId },
-    data: { deletedAt: new Date(), content: '[deleted]' },
+    data: { deletedAt: new Date(), content: '[deleted]', fileKey: null, fileName: null, fileType: null },
   });
 
   return deleted;
