@@ -27,11 +27,13 @@ app.use('/api/servers', require('./routes/servers'));
 app.use('/api/channels', require('./routes/channels'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/voice', require('./routes/voice'));
+app.use('/api/uploads', require('./routes/uploads'));
 
 // --- Error handler (must be last) ---
 app.use(errorHandler);
 
 module.exports = app;
+
 
 
 
