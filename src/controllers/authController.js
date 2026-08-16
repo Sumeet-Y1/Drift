@@ -1,9 +1,22 @@
 const authService = require('../services/authService');
-const { signupSchema, loginSchema, refreshSchema } = require('../validators/authValidator');
+const {
+  requestSignupOtpSchema,
+  verifySignupOtpSchema,
+  loginSchema,
+  refreshSchema,
+  requestPasswordResetSchema,
+  confirmPasswordResetSchema,
+} = require('../validators/authValidator');
 
-async function signupController(req, res) {
-  const parsed = signupSchema.parse(req.body);
-  const result = await authService.signup(parsed.username, parsed.email, parsed.password);
+async function requestSignupOtpController(req, res) {
+  const parsed = requestSignupOtpSchema.parse(req.body);
+  const result = await authService.requestSignupOtp(parsed.username, parsed.email, parsed.password);
+  res.status(200).json(result);
+}
+
+async function verifySignupOtpController(req, res) {
+  const parsed = verifySignupOtpSchema.parse(req.body);
+  const result = await authService.verifySignupOtp(parsed.email, parsed.otpCode);
   res.status(201).json(result);
 }
 
@@ -25,4 +38,24 @@ async function logoutController(req, res) {
   res.status(200).json(result);
 }
 
-module.exports = { signupController, loginController, refreshController, logoutController };
+async function requestPasswordResetController(req, res) {
+  const parsed = requestPasswordResetSchema.parse(req.body);
+  const result = await authService.requestPasswordReset(parsed.email);
+  res.status(200).json(result);
+}
+
+async function confirmPasswordResetController(req, res) {
+  const parsed = confirmPasswordResetSchema.parse(req.body);
+  const result = await authService.confirmPasswordReset(parsed.email, parsed.otpCode, parsed.newPassword);
+  res.status(200).json(result);
+}
+
+module.exports = {
+  requestSignupOtpController,
+  verifySignupOtpController,
+  loginController,
+  refreshController,
+  logoutController,
+  requestPasswordResetController,
+  confirmPasswordResetController,
+};
