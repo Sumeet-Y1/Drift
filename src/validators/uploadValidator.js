@@ -6,4 +6,8 @@ const getUploadUrlSchema = z.object({
   fileSize: z.number().positive(),
 });
 
-module.exports = { getUploadUrlSchema };
+const setAvatarSchema = z.object({
+  fileKey: z.string().min(1),
+});
+
+module.exports = { getUploadUrlSchema, setAvatarSchema };
