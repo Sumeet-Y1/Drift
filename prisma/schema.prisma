@@ -23,6 +23,25 @@ model User {
   refreshTokens       RefreshToken[]
 }
 
+model PendingSignup {
+  id            String   @id @default(uuid())
+  username      String
+  email         String   @unique
+  passwordHash  String
+  otpCode       String
+  otpExpiresAt  DateTime
+  createdAt     DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  otpCode   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
