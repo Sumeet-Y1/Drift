@@ -4,8 +4,17 @@ const { getDownloadUrl } = require('./uploadService');
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+// avatarUrl can hold either a raw S3 key (self-uploaded avatars) or a full external URL
+// (e.g. Google profile pictures). Only sign it if it looks like an S3 key.
+async function resolveAvatarUrl(avatarUrl) {
+  if (!avatarUrl) return null;
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+    return avatarUrl;
+  }
+  return getDownloadUrl(avatarUrl);
+}
+
 async function setAvatar(userId, fileKey) {
-  // Basic sanity check: avatar keys should live under this user's own uploads folder
   if (!fileKey.startsWith('uploads/' + userId + '/')) {
     const err = new Error('Invalid file reference');
     err.statusCode = 403;
@@ -18,9 +27,7 @@ async function setAvatar(userId, fileKey) {
     select: { id: true, username: true, email: true, avatarUrl: true },
   });
 
-  if (user.avatarUrl) {
-    user.avatarUrl = await getDownloadUrl(user.avatarUrl);
-  }
+  user.avatarUrl = await resolveAvatarUrl(user.avatarUrl);
 
   return user;
 }
@@ -37,9 +44,7 @@ async function getProfile(userId) {
     throw err;
   }
 
-  if (user.avatarUrl) {
-    user.avatarUrl = await getDownloadUrl(user.avatarUrl);
-  }
+  user.avatarUrl = await resolveAvatarUrl(user.avatarUrl);
 
   return user;
 }
