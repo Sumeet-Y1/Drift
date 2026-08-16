@@ -9,10 +9,12 @@ const {
   requestPasswordResetController,
   confirmPasswordResetController,
 } = require('../controllers/authController');
+const { googleLoginController } = require('../controllers/googleAuthController');
 
 router.post('/signup/request-otp', requestSignupOtpController);
 router.post('/signup/verify-otp', verifySignupOtpController);
 router.post('/login', loginController);
+router.post('/google', googleLoginController);
 router.post('/refresh', refreshController);
 router.post('/logout', logoutController);
 router.post('/password-reset/request', requestPasswordResetController);
