@@ -12,8 +12,15 @@ const { router: webhookRouter } = require('./routes/webhooks');
 
 const app = express();
 
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
+};
+
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 
 app.use('/api/webhooks', webhookRouter);
