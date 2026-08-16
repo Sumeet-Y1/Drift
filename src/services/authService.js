@@ -41,7 +41,6 @@ async function requestSignupOtp(username, email, password) {
   const otpCode = generateOtp();
   const otpExpiresAt = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
-  // Upsert: if they requested an OTP before but never verified, overwrite with a fresh one
   await prisma.pendingSignup.upsert({
     where: { email },
     create: { username, email, passwordHash, otpCode, otpExpiresAt },
@@ -101,6 +100,12 @@ async function login(email, password) {
     throw err;
   }
 
+  if (!user.passwordHash) {
+    const err = new Error('This account uses Google sign-in. Please log in with Google.');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const isValid = await comparePassword(password, user.passwordHash);
 
   if (!isValid) {
@@ -149,7 +154,6 @@ async function logout(refreshTokenString) {
 async function requestPasswordReset(email) {
   const user = await prisma.user.findUnique({ where: { email } });
 
-  // Deliberately don't reveal whether the email exists - prevents email enumeration
   if (!user) {
     return { message: 'If an account exists with this email, a reset code has been sent' };
   }
@@ -191,7 +195,6 @@ async function confirmPasswordReset(email, otpCode, newPassword) {
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
     prisma.passwordReset.update({ where: { id: resetRequest.id }, data: { usedAt: new Date() } }),
-    // Revoke all existing refresh tokens on password change - forces re-login everywhere
     prisma.refreshToken.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } }),
   ]);
 
