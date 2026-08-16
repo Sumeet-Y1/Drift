@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 require('express-async-errors');
 
 const express = require('express');
@@ -37,6 +37,7 @@ app.use('/api/channels', apiLimiter, require('./routes/channels'));
 app.use('/api/conversations', apiLimiter, require('./routes/conversations'));
 app.use('/api/voice', apiLimiter, require('./routes/voice'));
 app.use('/api/uploads', apiLimiter, require('./routes/uploads'));
+app.use('/api/users', apiLimiter, require('./routes/users'));
 
 app.use(errorHandler);
 
