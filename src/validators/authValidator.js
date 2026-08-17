@@ -1,8 +1,18 @@
 const { z } = require('zod');
+const disposableDomains = require('disposable-email-domains');
+
+const disposableDomainSet = new Set(disposableDomains);
+
+function isDisposableEmail(email) {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain ? disposableDomainSet.has(domain) : false;
+}
 
 const requestSignupOtpSchema = z.object({
   username: z.string().min(3).max(20),
-  email: z.string().email(),
+  email: z.string().email().refine((email) => !isDisposableEmail(email), {
+    message: 'Disposable email addresses are not allowed',
+  }),
   password: z.string().min(6),
 });
 
