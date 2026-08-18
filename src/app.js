@@ -1,19 +1,16 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 require('express-async-errors');
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
-
+const pinoHttp = require('pino-http');
+const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 const { router: webhookRouter } = require('./routes/webhooks');
 
 const app = express();
-
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
-
 const corsOptions = {
   origin: allowedOrigins,
   credentials: true,
@@ -21,10 +18,8 @@ const corsOptions = {
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(morgan('dev'));
-
+app.use(pinoHttp({ logger }));
 app.use('/api/webhooks', webhookRouter);
-
 app.use(express.json());
 
 app.get('/health', (req, res) => {
