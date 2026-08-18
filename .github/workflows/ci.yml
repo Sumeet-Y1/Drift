@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: drift_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/drift_ci
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+      RESEND_API_KEY: dummy_resend_key
+      GOOGLE_CLIENT_ID: dummy_google_client_id
+      LIVEKIT_URL: http://localhost:7880
+      LIVEKIT_API_KEY: dummy_livekit_key
+      LIVEKIT_API_SECRET: dummy_livekit_secret
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: dummy_access_key
+      AWS_SECRET_ACCESS_KEY: dummy_secret_key
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+
+      - name: Boot server smoke test
+        run: |
+          timeout 10s node server.js &
+          sleep 3
+          curl -f http://localhost:4000/health || exit 1
