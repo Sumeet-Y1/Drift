@@ -1,15 +1,12 @@
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 jobs:
   build-and-check:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:16
@@ -24,7 +21,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/drift_ci
       JWT_SECRET: ci-test-secret
@@ -37,28 +33,41 @@ jobs:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: dummy_access_key
       AWS_SECRET_ACCESS_KEY: dummy_secret_key
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Generate Prisma client
         run: npx prisma generate
-
       - name: Run migrations
         run: npx prisma migrate deploy
-
       - name: Boot server smoke test
         run: |
           timeout 10s node server.js &
           sleep 3
           curl -f http://localhost:4000/health || exit 1
+
+  deploy:
+    needs: build-and-check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ${{ secrets.EC2_APP_DIR }}
+            git pull origin main
+            npm ci
+            npx prisma generate
+            npx prisma migrate deploy
+            pm2 restart drift-backend
